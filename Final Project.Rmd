@@ -1,0 +1,142 @@
+---
+title: "TSX Composite Price Prediction"
+author: "Chetan Kumar"
+date: "12/07/2021"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r package loading, results='hide', warning=FALSE, message=FALSE, echo=FALSE}
+
+rm(list = ls())
+# Package names added in vector packages
+packages <- c("ggplot2","quantmod","dplyr","ggplot2","rmarkdown","psych","tseries","timeSeries","data.table","fpp2","forecast","stats","lubridate")
+# Install packages which are not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+
+if(any(installed_packages == FALSE)){
+        install.packages(packages[!installed_packages])
+}
+# Package Loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+
+
+```{r data loading and summary, warning=FALSE, message=FALSE}
+# Download symbol data
+TSX_Composite_Data_gs <- getSymbols("^GSPTSE", auto.assign=FALSE, from="2016-01-01", to="2019-12-31")
+
+TSX_Composite_Data <- as.data.frame(TSX_Composite_Data_gs)
+TSX_Composite_Data$Date <- time(TSX_Composite_Data_gs)
+
+# Chart series bar graph
+chartSeries(TSX_Composite_Data_gs, type = "bars", name = "TSX Composite Price 2016-2019")
+
+
+
+```
+
+ 
+
+```{r plot close price with day number}
+describe(TSX_Composite_Data_gs)
+
+# Close price of stock with day number
+plot(~TSX_Composite_Data$Date + TSX_Composite_Data$GSPTSE.Close , main = "Closing price of stock with day number" , pch =1)
+
+```
+
+```{r Corelation}
+# Correlation to check linearity component
+cor(TSX_Composite_Data_gs[,c(1:5)])
+
+```
+```{r T-Test}
+# Welch's t-test on Open Price and Close Price
+t.test(TSX_Composite_Data_gs$GSPTSE.Open, TSX_Composite_Data_gs$GSPTSE.Close)
+# Welch's t-test on Volumne and Close Price
+t.test(TSX_Composite_Data_gs$GSPTSE.Volume, TSX_Composite_Data_gs$GSPTSE.Close)
+
+
+
+```
+
+```{r linear regression}
+#Creating linear model of Date and Volume on Close Price
+model <- lm(formula = TSX_Composite_Data$GSPTSE.Close ~ TSX_Composite_Data$Date + TSX_Composite_Data$GSPTSE.Volume)
+summary(model)
+
+
+# Plot of linear model
+plot(model)
+# Plot Date and Close Price
+plot(TSX_Composite_Data$Date,fitted(model), xlab = "Date", ylab = "Close Price", main = "Close Price VS Time Scatterplot")
+# Calculate RSS
+RSS <- c(crossprod(model$residuals))
+# Claculate MSE
+MSE <- RSS / length(model$residuals)
+# Calculate RMSE
+RMSE <- sqrt(MSE)
+sprintf("MAPE : %s", MSE)
+sprintf("RMSE : %s", RMSE)
+
+# Check residuals of linear model
+checkresiduals(model)
+# Accuracy level of linear model
+accuracy(model)
+
+```
+```{r Decomposing and splitting data}
+# Take only the closing price
+closing_pr <- Cl(to.monthly(TSX_Composite_Data_gs))
+
+# Decompose it
+dc <- decompose(as.ts(closing_pr, start=c(2016,1)))
+plot(dc)
+
+# Seasonal component 
+dc$seasonal
+
+# Number of period we want to forecast
+n <- 100
+
+# Splitting the data
+train <- head(Cl(TSX_Composite_Data_gs), length(Cl(TSX_Composite_Data_gs))-n)
+test <- tail(Cl(TSX_Composite_Data_gs), n)
+```
+
+
+```{r Creating Arima Model}
+# Creating Seasonal ARIMA model
+
+# Create the Model
+model_s <- auto.arima(train)
+
+# Forecast n periods of the data
+fc_s <- forecast(model_s, h=n)
+
+# Plot the result
+autoplot(fc_s)+
+  autolayer(ts(test, start= length(train)), series="Test Data")
+
+
+```
+
+
+```{r Residuals ana Accuracy}
+
+# Residual of ARIMA Model
+checkresiduals(fc_s)
+
+#Accuracy Metrics of ARIMA
+accuracy(fc_s)
+
+# Summary of ARIMA model
+summary(model_s)
+```
+
+# Linkedin Link
+
+https://www.linkedin.com/in/chetan-kumar-937a67114/
