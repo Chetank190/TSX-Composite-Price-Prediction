@@ -1,5 +1,5 @@
 # TSX-Composite-Price-Prediction
-Compared linear regression performace with ARIMA model for prediction the prices of TSX Composite Index.  
+Compared linear regression performance with ARIMA model for prediction the prices of TSX Composite Index.  
 
 ## Results  
 ARIMA model has a RMSE of 90.67 which has better results than linear Regression with RMSE of 595.60 while forecasting our TSX Composite closing price.  
